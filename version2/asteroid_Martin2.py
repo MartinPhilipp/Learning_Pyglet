@@ -192,7 +192,7 @@ class Viewer():
         
         # Set up the two top labels
         self.score_label = pyglet.text.Label(text="Score: 0", x=10, y=575)
-        self.level_label = pyglet.text.Label(text="Version 1: Basic Motion",
+        self.level_label = pyglet.text.Label(text="Version 2: Basic Motion",
                                 x=400, y=575, anchor_x='center')
 
         # Initialize the player sprite
@@ -201,15 +201,27 @@ class Viewer():
 
         # Make three asteroids so we have something to shoot at 
         self.asteroids = self.load_asteroids(5, self.player_ship.position)
-        #self.asteroid1 = Asteroid(image=self.asteroid_image,x=200,y=200)
         # Store all objects that update each frame in a list
         Viewer.game_objects = [self.player_ship] + self.asteroids
 
+        # Make three sprites to represent remaining lives
+        self.player_lives = self.player_lives(2)
+        
         #pyglet.clock.schedule_interval(self, 1 / 120.0)
         # Tell the main window that the player object responds to events
         self.game_window.push_handlers(self.player_ship)
         # Tell pyglet to do its thing
         pyglet.app.run()
+        
+    def player_lives(self, num_icons):
+        """Generate sprites for player life icons"""
+        player_lives = []
+        for i in range(num_icons):
+            new_sprite = pyglet.sprite.Sprite(img=self.player_image,x=785 - i * 30, y=585,)
+            new_sprite.scale = 0.5
+            player_lives.append(new_sprite)
+            print("player_lives!")
+        return player_lives
 
     def load_asteroids(self, num_asteroids, player_position):
         """Generate asteroid objects with random positions and velocities, 
@@ -229,6 +241,8 @@ class Viewer():
 
     def on_draw(self):
         self.game_window.clear()
+        for symbol in self.player_lives:
+            symbol.draw()
         self.player_ship.draw()
         for asteroid in self.asteroids:
             asteroid.draw()
