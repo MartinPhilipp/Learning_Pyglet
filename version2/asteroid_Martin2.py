@@ -35,14 +35,14 @@ class PhysicalObject(pyglet.sprite.Sprite):
         # Tell the game handler about any event handlers
         # Only applies to things with keyboard/mouse input
         self.event_handlers = []
-        print("init aufgerufen", self)
+        #print("init aufgerufen", self)
     def update(self, dt):
         """This method should be called every frame."""
         
         # Update position according to velocity and time
         self.x += self.velocity_x * dt
         self.y += self.velocity_y * dt
-        print(self,self.x,self.y)
+        #print(self,self.x,self.y)
         # Wrap around the screen if necessary
         self.check_bounds()
 
@@ -91,12 +91,14 @@ class Asteroid(PhysicalObject):
 
     def __init__(self, image, *args, **kwargs):
         super(Asteroid, self).__init__(image=image, *args, **kwargs)
+        self.velocity_x = random.random() * 40
+        self.velocity_y = random.random() * 40
 
         # Slowly rotate the asteroid as it moves
         self.rotate_speed = random.random() * 100.0 - 50.0
 
     def update(self, dt):
-        print("asteroidupdate",self,dt)
+        #("asteroidupdate",self,dt)
         super(Asteroid, self).update(dt)
         self.rotation += self.rotate_speed * dt
 
@@ -113,6 +115,51 @@ class Asteroid(PhysicalObject):
                 new_asteroid.velocity_y = random.random() * 70 + self.velocity_y
                 new_asteroid.scale = self.scale * 0.5
                 self.new_objects.append(new_asteroid)
+                
+class Player(PhysicalObject):
+    """Physical object that responds to user input"""
+
+    def __init__(self, image, *args, **kwargs):
+        super(Player, self).__init__(image=image, *args, **kwargs)
+
+        # Set some easy-to-tweak constants
+        self.thrust = 300.0
+        self.rotate_speed = 200.0
+
+        self.keys = dict(left=False, right=False, up=False)
+
+    def on_key_press(self, symbol, modifiers):
+        if symbol == pyglet.window.key.UP:
+            self.keys['up'] = True
+        elif symbol == pyglet.window.key.LEFT:
+            self.keys['left'] = True
+        elif symbol == pyglet.window.key.RIGHT:
+            self.keys['right'] = True
+
+    def on_key_release(self, symbol, modifiers):
+        if symbol == pyglet.window.key.UP:
+            self.keys['up'] = False
+        elif symbol == pyglet.window.key.LEFT:
+            self.keys['left'] = False
+        elif symbol == pyglet.window.key.RIGHT:
+            self.keys['right'] = False
+
+    def update(self, dt):
+        # Do all the normal physics stuff
+        super(Player, self).update(dt)
+
+        if self.keys['left']:
+            self.rotation -= self.rotate_speed * dt
+        if self.keys['right']:
+            self.rotation += self.rotate_speed * dt
+
+        if self.keys['up']:
+            angle_radians = -math.radians(self.rotation)
+            force_x = math.cos(angle_radians) * self.thrust * dt
+            force_y = math.sin(angle_radians) * self.thrust * dt
+            self.velocity_x += force_x
+            self.velocity_y += force_y
+
 
 class Viewer():
     
@@ -131,6 +178,7 @@ class Viewer():
         # Tell pyglet where to find the resources
         pyglet.resource.path = ['data']
         pyglet.resource.reindex()
+        
 
         # Load the three main resources and get them to draw centered
         self.player_image = pyglet.resource.image("player.png")
@@ -148,17 +196,18 @@ class Viewer():
                                 x=400, y=575, anchor_x='center')
 
         # Initialize the player sprite
-        self.player_ship = pyglet.sprite.Sprite(img=self.player_image, x=400, y=300)
+        self.player_ship = Player(image=self.player_image, x=400, y=300)
+        Viewer.game_objects.append(self.player_ship)
 
         # Make three asteroids so we have something to shoot at 
-        #self.asteroids = self.load_asteroids(5, self.player_ship.position)
-        self.asteroid1 = Asteroid(image=self.asteroid_image,x=200,y=200)
+        self.asteroids = self.load_asteroids(5, self.player_ship.position)
+        #self.asteroid1 = Asteroid(image=self.asteroid_image,x=200,y=200)
         # Store all objects that update each frame in a list
-        Viewer.game_objects.append(self.asteroid1)#[self.player_ship] + self.asteroids
-        #Viewer.game_objects = self.asteroids
+        Viewer.game_objects = [self.player_ship] + self.asteroids
 
         #pyglet.clock.schedule_interval(self, 1 / 120.0)
-        
+        # Tell the main window that the player object responds to events
+        self.game_window.push_handlers(self.player_ship)
         # Tell pyglet to do its thing
         pyglet.app.run()
 
@@ -172,17 +221,17 @@ class Viewer():
                 asteroid_x = random.randint(0, 800)
                 asteroid_y = random.randint(0, 600)
             #new_asteroid = pyglet.sprite.Sprite(img=self.asteroid_image, x=asteroid_x, y=asteroid_y)
-            new_asteroid = Asteroid(x=asteroid_x, y=asteroid_y,)# batch=batch)
+            new_asteroid = Asteroid(image=self.asteroid_image,x=asteroid_x, y=asteroid_y,)# batch=batch)
             new_asteroid.rotation = random.randint(0, 360)
-            new_asteroid.velocity_x, new_asteroid.velocity_y = random.random() * 40, random.random() * 40
+            #new_asteroid.velocity_x, new_asteroid.velocity_y = random.random() * 40, random.random() * 40
             asteroids.append(new_asteroid)
         return asteroids
 
     def on_draw(self):
         self.game_window.clear()
         self.player_ship.draw()
-        #for asteroid in self.asteroids:
-        self.asteroid1.draw()
+        for asteroid in self.asteroids:
+            asteroid.draw()
         self.level_label.draw()
         self.score_label.draw()
 
@@ -197,4 +246,3 @@ if __name__ == "__main__":
     pyglet.clock.schedule_interval(update, 1 / 120.0)
     Viewer(800,600)
   
-    
